@@ -1,0 +1,97 @@
+body {
+  font-family: 'Segoe UI';
+  margin: 0;
+}
+
+.header {
+  background: #3476ae 0 0 no-repeat padding-box;
+  border: 1px solid #707070;
+  height: 55px;
+  left: 0;
+  top: 0;
+}
+
+.hr {
+  border: 1px solid #e0e0e0;
+  opacity: 1;
+}
+
+.controls {
+  margin-top: 1%;
+  text-align: center;
+  & > * {
+    margin-right: 15px !important;
+  }
+}
+
+.title {
+  color: #ffffff;
+  font: normal 22px/27px Segoe UI;
+  letter-spacing: 0;
+  margin: 13px;
+  margin-left: 36px;
+  opacity: 1;
+  text-align: left;
+}
+
+iframe {
+  border: none;
+}
+
+div.content {
+  display: flex;
+  height: calc(100vh - 57px);
+  aside {
+    flex: 0 1 350px;
+    padding: 40px 20px;
+    p {
+      font-weight: bold;
+    }
+    overflow-y: auto;
+  }
+  section {
+    flex: 1 1 auto;
+    .report-style-class {
+      height: 80vh;
+      width: 100%;
+      .report {
+        width: 100%;
+        height: 100%;
+      }
+    }
+  }
+}
+
+#root {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.page-div {
+  margin: 10px 0;
+}
+
+.vm-mw-100 {
+  min-width: 100% !important;
+}
+
+.vm-popover {
+  .MuiPaper-root {
+    min-width: 350px !important;
+    max-height: 300px !important;
+    overflow-y: auto;
+  }
+}
+
+.vm-rotate {
+  transform: rotate(180deg);
+}
+.vm-between-center {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vm-dropdown {
+  margin-top: 8px !important;
+}
