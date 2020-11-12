@@ -71,7 +71,7 @@ function App() {
   })
 
   const handleChangeSlicer = (type, slicerName) => (e) => {
-    console.log('handlechangeslicer:', type, slicerName, e.target.value, e.target.name, e.target.checked)
+    // console.log('handlechangeslicer:', type, slicerName, e.target.value, e.target.name, e.target.checked)
     let basicFilter
     const sData = state[type].filter((el) => Object.keys(el)[0] === slicerName)[0]
 
@@ -87,7 +87,7 @@ function App() {
       filterType: 1,
     }
     if (type === 'listSingle') {
-      console.log('basicFilter:', basicFilter)
+      // console.log('basicFilter:', basicFilter)
 
       const updatedData = state[type].map((el) =>
         Object.keys(el)[0] === slicerName
@@ -347,20 +347,20 @@ function App() {
                 propertyName: 'radius',
               })
               borderRadius = result?.value
-              console.log('border-radius:', borderRadius)
+              // console.log('border-radius:', borderRadius)
             } catch (err) {
               console.log('get border-radius catch:', err)
             }
 
             // get summarized data of slicer
             const result = await slicer.exportData(models.ExportDataType.Summarized)
-            console.log('result=====summarized:', JSON.stringify(result))
+            // console.log('result=====summarized:', JSON.stringify(result))
             // exclude first element, and empty string, (first element is column name)
             let sliceOptions = result.data.split('\r\n').filter((el, i) => i !== 0 && el)
 
             // get slicer state
             const st = await slicer.getSlicerState()
-            console.log('slicer:============:state', st)
+            // console.log('slicer:============:state', st)
             let curSelectedValues = st.filters[0]?.values || []
             let addedValueLists
 
@@ -451,7 +451,6 @@ function App() {
       .catch((err) => console.log('get Visual catch:', err))
   }
 
-  console.log('=================state ========> ', state)
   return (
     <div>
       {header}

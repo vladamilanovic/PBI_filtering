@@ -15,7 +15,7 @@ const useStyles = makeStyles((theme) => ({
 
 const ListSingle = ({ data, onChangeCallback }) => {
   const classes = useStyles()
-  console.log('list-single data:', data)
+  // console.log('list-single data:', data)
   const slicerName = Object.keys(data)[0]
   const sData = data[slicerName]
 

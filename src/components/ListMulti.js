@@ -15,7 +15,7 @@ const useStyles = makeStyles((theme) => ({
 
 const ListMulti = ({ data, onChangeCallback }) => {
   const classes = useStyles()
-  console.log('list-Multi data:', data)
+  // console.log('list-Multi data:', data)
   const slicerName = Object.keys(data)[0]
   const sData = data[slicerName]
   const columnName = sData.column
