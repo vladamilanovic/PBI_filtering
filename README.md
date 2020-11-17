@@ -30,4 +30,15 @@ You will also see any lint errors in the console.
 | Multi              | 2    | 5        |
 | Multi _Select All_ | 3    | 6        |
 
-> The `Selection controls` property is not supported right now, so we use `border radius` to check slicer type.
+The `Selection controls` property is not supported right now, so we use `border radius` to check slicer type.
+
+## Slicer Order
+
+It is needed to set `title` as the order
+
+## Page Navigation Button
+
+It is needed to set `title` like below
+`{Page Name}@@{Button Name}@@{order}`
+
+> ex: `Sales Performance@@Performance@@4`

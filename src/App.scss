@@ -95,3 +95,15 @@ div.content {
 .vm-dropdown {
   margin-top: 8px !important;
 }
+
+.slicers-div {
+  display: flex;
+  flex-direction: column;
+}
+
+@for $i from 1 through 20 {
+  .order-#{$i} {
+    order: $i;
+    -webkit-order: $i;
+  }
+}

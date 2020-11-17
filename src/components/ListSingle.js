@@ -5,10 +5,11 @@ import RadioGroup from '@material-ui/core/RadioGroup'
 import FormLabel from '@material-ui/core/FormLabel'
 import FormControl from '@material-ui/core/FormControl'
 import FormControlLabel from '@material-ui/core/FormControlLabel'
+import clsx from 'clsx'
 
 const useStyles = makeStyles((theme) => ({
   formControl: {
-    marginBottom: theme.spacing(4),
+    marginTop: theme.spacing(4),
     minWidth: '100%',
   },
 }))
@@ -20,7 +21,7 @@ const ListSingle = ({ data, onChangeCallback }) => {
   const sData = data[slicerName]
 
   return (
-    <FormControl component="fieldset" className={classes.formControl}>
+    <FormControl component="fieldset" className={clsx(classes.formControl, `order-${sData.order}`)}>
       <FormLabel component="legend">{sData.column}</FormLabel>
       <RadioGroup
         aria-label={slicerName}

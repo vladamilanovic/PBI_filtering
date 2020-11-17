@@ -7,6 +7,7 @@ import FormGroup from '@material-ui/core/FormGroup'
 import FormControlLabel from '@material-ui/core/FormControlLabel'
 import Checkbox from '@material-ui/core/Checkbox'
 import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown'
+import clsx from 'clsx'
 
 const useStyles = makeStyles((theme) => ({
   typography: {
@@ -22,6 +23,9 @@ const useStyles = makeStyles((theme) => ({
   legend: {
     color: '#0000008a',
   },
+  mTop: {
+    marginTop: theme.spacing(2)
+  }
 }))
 
 export default function DropMultiAll({ data, onChangeCallback }) {
@@ -43,7 +47,7 @@ export default function DropMultiAll({ data, onChangeCallback }) {
   const id = open ? 'simple-popover' : undefined
 
   return (
-    <div>
+    <div className={clsx(classes.mTop, `order-${sData.order}`)}>
       <span className={classes.legend}>{columnName}</span>
       <Button aria-describedby={id} variant="outlined" onClick={handleClick} className="vm-mw-100 vm-dropdown">
         <div className="vm-mw-100 vm-between-center">

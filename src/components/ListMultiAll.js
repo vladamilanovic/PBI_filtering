@@ -5,10 +5,11 @@ import FormControl from '@material-ui/core/FormControl'
 import FormGroup from '@material-ui/core/FormGroup'
 import FormControlLabel from '@material-ui/core/FormControlLabel'
 import Checkbox from '@material-ui/core/Checkbox'
+import clsx from 'clsx'
 
 const useStyles = makeStyles((theme) => ({
   formControl: {
-    marginBottom: theme.spacing(4),
+    marginTop: theme.spacing(4),
     minWidth: '100%',
   },
 }))
@@ -21,7 +22,7 @@ const ListMultiAll = ({ data, onChangeCallback }) => {
   const columnName = sData.column
 
   return (
-    <FormControl component="fieldset" className={classes.formControl}>
+    <FormControl component="fieldset" className={clsx(classes.formControl, `order-${sData.order}`)}>
       <FormLabel component="legend">{columnName}</FormLabel>
       <FormGroup>
         {sData.valueLists.map((option, index) => (

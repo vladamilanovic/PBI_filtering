@@ -5,9 +5,8 @@ import { makeStyles } from '@material-ui/core/styles'
 import FormLabel from '@material-ui/core/FormLabel'
 import FormControl from '@material-ui/core/FormControl'
 import FormControlLabel from '@material-ui/core/FormControlLabel'
-import AppBar from '@material-ui/core/AppBar'
-import Tabs from '@material-ui/core/Tabs'
-import Tab from '@material-ui/core/Tab'
+import Button from '@material-ui/core/Button'
+import ButtonGroup from '@material-ui/core/ButtonGroup'
 import './App.scss'
 
 import { models } from 'powerbi-client'
@@ -18,6 +17,9 @@ import ListSingle from './components/ListSingle'
 import ListMulti from './components/ListMulti'
 import ListMultiAll from './components/ListMultiAll'
 import DropMultiAll from './components/DropMultiAll'
+import clsx from 'clsx'
+import DropMulti from './components/DropMulti'
+import DropSingle from './components/DropSingle'
 
 const useStyles = makeStyles((theme) => ({
   formControl: {
@@ -31,8 +33,12 @@ const useStyles = makeStyles((theme) => ({
     height: 1,
     background: '#bbb',
   },
-  p0: {
-    // paddingBottom: 0,
+  active: {
+    color: '#fff',
+    background: theme.palette.primary.main,
+    '&:hover': {
+      background: theme.palette.primary.dark,
+    },
   },
 }))
 
@@ -86,7 +92,7 @@ function App() {
       // filterType: models.FilterType.BasicFilter,
       filterType: 1,
     }
-    if (type === 'listSingle') {
+    if (type === 'listSingle' || type === 'dropSingle') {
       // console.log('basicFilter:', basicFilter)
 
       const updatedData = state[type].map((el) =>
@@ -97,15 +103,23 @@ function App() {
                 column: sData[slicerName].column,
                 curValue: e.target.value,
                 valueLists: sData[slicerName].valueLists,
+                order: sData[slicerName].order,
               },
             }
           : el
       )
-      setState((curState) => ({
-        ...curState,
-        listSingle: updatedData,
-      }))
-    } else if (type === 'listMulti') {
+      if (type === 'listSingle') {
+        setState((curState) => ({
+          ...curState,
+          listSingle: updatedData,
+        }))
+      } else {
+        setState((curState) => ({
+          ...curState,
+          dropSingle: updatedData,
+        }))
+      }
+    } else if (type === 'listMulti' || type === 'dropMulti') {
       const updatedValueLists = sData[slicerName].valueLists.map(({ checked, label }) =>
         label === e.target.name ? { label, checked: e.target.checked } : { label, checked }
       )
@@ -127,14 +141,22 @@ function App() {
                 column: sData[slicerName].column,
                 curValue: updatedCurValues,
                 valueLists: updatedValueLists,
+                order: sData[slicerName].order,
               },
             }
           : el
       )
-      setState((curState) => ({
-        ...curState,
-        listMulti: updatedData,
-      }))
+      if (type === 'listMulti') {
+        setState((curState) => ({
+          ...curState,
+          listMulti: updatedData,
+        }))
+      } else {
+        setState((curState) => ({
+          ...curState,
+          dropMulti: updatedData,
+        }))
+      }
     } else if (type === 'listMultiAll' || type === 'dropMultiAll') {
       let updatedValueLists, updatedCurValues, updatedData
       if (e.target.name === 'Select All') {
@@ -180,6 +202,7 @@ function App() {
                 column: sData[slicerName].column,
                 curValue: updatedCurValues,
                 valueLists: updatedValueLists,
+                order: sData[slicerName].order,
               },
             }
           : el
@@ -249,17 +272,13 @@ function App() {
 
   // page navigation
   const [pages, setPages] = useState([])
-  const [curPage, setCurPage] = useState(0)
-  const handleChangePage = (event, newPageNum) => {
-    setCurPage(newPageNum)
-
-    const pageInstance = report.page(pages[newPageNum].name)
-    pageInstance.setActive()
-  }
-  function a11yProps(index) {
-    return {
-      id: `scrollable-auto-tab-${index}`,
-      'aria-controls': `scrollable-auto-tabpanel-${index}`,
+  const [navButtons, setNavButtons] = useState([])
+  const [curPage, setCurPage] = useState('') // save display name of the current page
+  const handleNav = (pageDName) => {
+    if (pageDName && pages) {
+      const pageObj = pages.filter((el) => el.dName === pageDName)
+      const pageInstance = report.page(pageObj[0].name)
+      pageInstance.setActive()
     }
   }
 
@@ -276,8 +295,8 @@ function App() {
   }
 
   const extraSettings = {
-    filterPaneEnabled: true,
-    navContentPaneEnabled: true,
+    filterPaneEnabled: false,
+    navContentPaneEnabled: false,
     hideErrors: false, // Use this *only* when you want to override error experience i.e, use onError
     // ... more custom settings
   }
@@ -330,17 +349,45 @@ function App() {
       dropMulti: [],
       dropMultiAll: [],
     })
+    setNavButtons([])
 
     let activePage = data.newPage
+    setCurPage(activePage.displayName)
+
     activePage
       .getVisuals()
       .then(async function (visuals) {
+        let navigationButtons = visuals.filter((visual) => visual.type === 'actionButton')
+        let navButtonsArr = []
+        for (let ii = 0; ii < navigationButtons.length; ii++) {
+          const el = navigationButtons[ii]
+          try {
+            const result = await el.getProperty({
+              objectName: 'title',
+              propertyName: 'titleText',
+            })
+            const navTitle = result?.value
+            if (navTitle && navTitle.includes('@@')) {
+              const infoArr = navTitle.split('@@')
+              navButtonsArr.push({
+                name: infoArr[1],
+                pageDName: infoArr[0],
+                order: infoArr[2],
+              })
+            }
+          } catch (err) {
+            console.log('navigation get title catch:', err)
+          }
+        }
+        setNavButtons(navButtonsArr)
+
         var slicers = visuals.filter((visual) => visual.type === 'slicer')
 
         if (slicers.length > 0) {
           for (const slicer of slicers) {
             // get slicer *border radius* property
             let borderRadius = SlicerType.LIST_MULTI
+            let slicerOrder = 1
             try {
               const result = await slicer.getProperty({
                 objectName: 'border',
@@ -348,8 +395,14 @@ function App() {
               })
               borderRadius = result?.value
               // console.log('border-radius:', borderRadius)
+              const titleProperty = await slicer.getProperty({
+                objectName: 'title',
+                propertyName: 'titleText',
+              })
+              slicerOrder = titleProperty?.value
+              // console.log('slicer-order:', slicerOrder)
             } catch (err) {
-              console.log('get border-radius catch:', err)
+              console.log('get property(border-radius & title) catch:', err)
             }
 
             // get summarized data of slicer
@@ -376,6 +429,24 @@ function App() {
                         column: st.targets[0].column,
                         curValue: st.filters[0]?.values[0],
                         valueLists: sliceOptions,
+                        order: slicerOrder,
+                      },
+                    },
+                  ],
+                }))
+                break
+              case SlicerType.DROP_SINGLE:
+                setState((curState) => ({
+                  ...curState,
+                  dropSingle: [
+                    ...curState.dropSingle,
+                    {
+                      [slicer.name]: {
+                        table: st.targets[0].table,
+                        column: st.targets[0].column,
+                        curValue: st.filters[0]?.values[0],
+                        valueLists: sliceOptions,
+                        order: slicerOrder,
                       },
                     },
                   ],
@@ -398,6 +469,7 @@ function App() {
                         column: st.targets[0].column,
                         curValue: curSelectedValues,
                         valueLists: addedValueLists,
+                        order: slicerOrder,
                       },
                     },
                   ],
@@ -420,6 +492,27 @@ function App() {
                         column: st.targets[0].column,
                         curValue: curSelectedValues,
                         valueLists: addedValueLists,
+                        order: slicerOrder,
+                      },
+                    },
+                  ],
+                }))
+                break
+              case SlicerType.DROP_MULTI:
+                setState((curState) => ({
+                  ...curState,
+                  dropMulti: [
+                    ...curState.dropMulti,
+                    {
+                      [slicer.name]: {
+                        order: slicerOrder,
+                        table: st.targets[0].table,
+                        column: st.targets[0].column,
+                        curValue: curSelectedValues,
+                        valueLists: sliceOptions.map((el) => ({
+                          label: el,
+                          checked: curSelectedValues.includes(el) ? true : false,
+                        })),
                       },
                     },
                   ],
@@ -433,6 +526,7 @@ function App() {
                     ...curState.listMulti,
                     {
                       [slicer.name]: {
+                        order: slicerOrder,
                         table: st.targets[0].table,
                         column: st.targets[0].column,
                         curValue: curSelectedValues,
@@ -451,6 +545,10 @@ function App() {
       .catch((err) => console.log('get Visual catch:', err))
   }
 
+  // console.log('=================state ========> ', state)
+  // console.log('curpage:', curPage)
+  // console.log('navButtons:', navButtons)
+  // console.log('pages:', pages)
   return (
     <div>
       {header}
@@ -468,37 +566,44 @@ function App() {
 
           <div className={classes.sshr}></div>
 
-          {state.listSingle.map((el, idx) => (
-            <ListSingle data={el} key={idx} onChangeCallback={handleChangeSlicer} />
-          ))}
-          {state.listMulti.map((el, idx) => (
-            <ListMulti data={el} key={idx} onChangeCallback={handleChangeSlicer} />
-          ))}
-          {state.listMultiAll.map((el, idx) => (
-            <ListMultiAll data={el} key={idx} onChangeCallback={handleChangeSlicer} />
-          ))}
-          {state.dropMultiAll.map((el, idx) => (
-            <DropMultiAll data={el} key={idx} onChangeCallback={handleChangeSlicer} />
-          ))}
+          <div className="slicers-div">
+            {state.listSingle.map((el, idx) => (
+              <ListSingle data={el} key={idx} onChangeCallback={handleChangeSlicer} />
+            ))}
+            {state.listMulti.map((el, idx) => (
+              <ListMulti data={el} key={idx} onChangeCallback={handleChangeSlicer} />
+            ))}
+            {state.listMultiAll.map((el, idx) => (
+              <ListMultiAll data={el} key={idx} onChangeCallback={handleChangeSlicer} />
+            ))}
+            {state.dropMultiAll.map((el, idx) => (
+              <DropMultiAll data={el} key={idx} onChangeCallback={handleChangeSlicer} />
+            ))}
+            {state.dropMulti.map((el, idx) => (
+              <DropMulti data={el} key={idx} onChangeCallback={handleChangeSlicer} />
+            ))}
+            {state.dropSingle.map((el, idx) => (
+              <DropSingle data={el} key={idx} onChangeCallback={handleChangeSlicer} />
+            ))}
+          </div>
         </aside>
+
         <section>
           {pages.length > 0 && (
             <div className="page-div">
-              <AppBar position="static" color="default">
-                <Tabs
-                  value={curPage}
-                  onChange={handleChangePage}
-                  indicatorColor="primary"
-                  textColor="primary"
-                  variant="scrollable"
-                  scrollButtons="auto"
-                  aria-label="scrollable auto tabs example"
-                >
-                  {pages.map((page) => (
-                    <Tab label={page.dName} {...a11yProps(page.index)} key={page.index} />
+              <ButtonGroup color="primary" aria-label="outlined primary button group">
+                {navButtons
+                  .sort((a, b) => parseInt(a.order) - parseInt(b.order))
+                  .map((el, index) => (
+                    <Button
+                      key={index}
+                      className={clsx(curPage === el.pageDName && classes.active)}
+                      onClick={() => handleNav(el.pageDName)}
+                    >
+                      {el.name}
+                    </Button>
                   ))}
-                </Tabs>
-              </AppBar>
+              </ButtonGroup>
             </div>
           )}
           <div className="report-style-class">
