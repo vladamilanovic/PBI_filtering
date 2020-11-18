@@ -241,25 +241,16 @@ function App() {
             })[0]
 
             // Set the slicer state which contains the slicer filters.
-            if (basicFilter === 'empty') {
-              slicer
-                .setSlicerState({ filters: [] })
-                .then(function () {
-                  console.log('slicer was set.')
-                })
-                .catch(function (errors) {
-                  console.log(errors)
-                })
-            } else {
-              slicer
-                .setSlicerState({ filters: [basicFilter] })
-                .then(function () {
-                  console.log('slicer was set.')
-                })
-                .catch(function (errors) {
-                  console.log(errors)
-                })
-            }
+            let filterData = []
+            if (basicFilter !== 'empty') filterData = [basicFilter]
+            slicer
+              .setSlicerState({ filters: filterData })
+              .then(function () {
+                console.log('slicer was set.')
+              })
+              .catch(function (errors) {
+                console.log(errors)
+              })
           })
           .catch(function (errors) {
             console.log(errors)
@@ -335,12 +326,205 @@ function App() {
     // will be called when report renders:
     // - visuals finish rendering
     // - report is fully visible and ready for consumption
+    console.log('page rendered')
+    setReport(report)
+
+    report
+      .getPages()
+      .then(function (pages) {
+        // Retrieve active page.
+        var activePage = pages.filter(function (page) {
+          return page.isActive
+        })[0]
+
+        activePage
+          .getVisuals()
+          .then(async function (visuals) {
+            // Retrieve the slicers.
+            let slicers = visuals.filter((visual) => visual.type === 'slicer')
+
+            if (slicers.length > 0) {
+              for (const slicer of slicers) {
+                // get slicer *border radius* property
+                let borderRadius = SlicerType.LIST_MULTI
+                let slicerOrder = 1
+                try {
+                  const result = await slicer.getProperty({
+                    objectName: 'border',
+                    propertyName: 'radius',
+                  })
+                  borderRadius = result?.value
+                  // console.log('border-radius:', borderRadius)
+                  const titleProperty = await slicer.getProperty({
+                    objectName: 'title',
+                    propertyName: 'titleText',
+                  })
+                  slicerOrder = titleProperty?.value
+                  // console.log('slicer-order:', slicerOrder)
+                } catch (err) {
+                  console.log('get property(border-radius & title) catch:', err)
+                }
+
+                // get summarized data of slicer
+                const result = await slicer.exportData(models.ExportDataType.Summarized)
+                // console.log('result=====summarized:', JSON.stringify(result))
+                // exclude first element, and empty string, (first element is column name)
+                let sliceOptions = result.data.split('\r\n').filter((el, i) => i !== 0 && el)
+
+                // get slicer state
+                const st = await slicer.getSlicerState()
+                // console.log('slicer:============:state', st)
+                let curSelectedValues = st.filters[0]?.values || []
+                let addedValueLists
+
+                switch (borderRadius) {
+                  case SlicerType.LIST_SINGLE:
+                    setState((curState) => ({
+                      ...curState,
+                      listSingle: curState.listSingle.reduce(
+                        (nArr, curEl) => (Object.keys(curEl)[0] === slicer.name ? [...nArr] : [...nArr, curEl]),
+                        [
+                          {
+                            [slicer.name]: {
+                              table: st.targets[0].table,
+                              column: st.targets[0].column,
+                              curValue: st.filters[0]?.values[0],
+                              valueLists: sliceOptions,
+                              order: slicerOrder,
+                            },
+                          },
+                        ]
+                      ),
+                    }))
+                    break
+                  case SlicerType.DROP_SINGLE:
+                    setState((curState) => ({
+                      ...curState,
+                      dropSingle: curState.dropSingle.reduce(
+                        (nArr, curEl) => (Object.keys(curEl)[0] === slicer.name ? [...nArr] : [...nArr, curEl]),
+                        [
+                          {
+                            [slicer.name]: {
+                              table: st.targets[0].table,
+                              column: st.targets[0].column,
+                              curValue: st.filters[0]?.values[0],
+                              valueLists: sliceOptions,
+                              order: slicerOrder,
+                            },
+                          },
+                        ]
+                      ),
+                    }))
+                    break
+                  case SlicerType.LIST_MULTI_ALL:
+                    addedValueLists = sliceOptions.map((el) => ({
+                      label: el,
+                      checked: curSelectedValues.includes(el) ? true : false,
+                    }))
+                    addedValueLists.unshift({ label: 'Select All', checked: false })
+
+                    setState((curState) => ({
+                      ...curState,
+                      listMultiAll: curState.listMultiAll.reduce(
+                        (nArr, curEl) => (Object.keys(curEl)[0] === slicer.name ? [...nArr] : [...nArr, curEl]),
+                        [
+                          {
+                            [slicer.name]: {
+                              table: st.targets[0].table,
+                              column: st.targets[0].column,
+                              curValue: curSelectedValues,
+                              valueLists: addedValueLists,
+                              order: slicerOrder,
+                            },
+                          },
+                        ]
+                      ),
+                    }))
+                    break
+                  case SlicerType.DROP_MULTI_ALL:
+                    addedValueLists = sliceOptions.map((el) => ({
+                      label: el,
+                      checked: curSelectedValues.includes(el) ? true : false,
+                    }))
+                    addedValueLists.unshift({ label: 'Select All', checked: false })
+
+                    setState((curState) => ({
+                      ...curState,
+                      dropMultiAll: curState.dropMultiAll.reduce(
+                        (nArr, curEl) => (Object.keys(curEl)[0] === slicer.name ? [...nArr] : [...nArr, curEl]),
+                        [
+                          {
+                            [slicer.name]: {
+                              table: st.targets[0].table,
+                              column: st.targets[0].column,
+                              curValue: curSelectedValues,
+                              valueLists: addedValueLists,
+                              order: slicerOrder,
+                            },
+                          },
+                        ]
+                      ),
+                    }))
+                    break
+                  case SlicerType.DROP_MULTI:
+                    setState((curState) => ({
+                      ...curState,
+                      dropMulti: curState.dropMulti.reduce(
+                        (nArr, curEl) => (Object.keys(curEl)[0] === slicer.name ? [...nArr] : [...nArr, curEl]),
+                        [
+                          {
+                            [slicer.name]: {
+                              order: slicerOrder,
+                              table: st.targets[0].table,
+                              column: st.targets[0].column,
+                              curValue: curSelectedValues,
+                              valueLists: sliceOptions.map((el) => ({
+                                label: el,
+                                checked: curSelectedValues.includes(el) ? true : false,
+                              })),
+                            },
+                          },
+                        ]
+                      ),
+                    }))
+                    break
+                  default:
+                    // SlicerType.LIST_MULTI
+                    setState((curState) => ({
+                      ...curState,
+                      listMulti: curState.listMulti.reduce(
+                        (nArr, curEl) => (Object.keys(curEl)[0] === slicer.name ? [...nArr] : [...nArr, curEl]),
+                        [
+                          {
+                            [slicer.name]: {
+                              table: st.targets[0].table,
+                              column: st.targets[0].column,
+                              curValue: st.filters[0]?.values[0],
+                              valueLists: sliceOptions,
+                              order: slicerOrder,
+                            },
+                          },
+                        ]
+                      ),
+                    }))
+                }
+              }
+            }
+          })
+          .catch(function (errors) {
+            console.log(errors)
+          })
+      })
+      .catch(function (errors) {
+        console.log(errors)
+      })
   }
 
   const handlePageChange = (data) => {
     // will be called when pages in your report changes
-
+    console.log('page changed')
     // initialize state
+    setNavButtons([])
     setState({
       listSingle: [],
       listMulti: [],
@@ -349,8 +533,6 @@ function App() {
       dropMulti: [],
       dropMultiAll: [],
     })
-    setNavButtons([])
-
     let activePage = data.newPage
     setCurPage(activePage.displayName)
 
@@ -367,7 +549,7 @@ function App() {
               propertyName: 'titleText',
             })
             const navTitle = result?.value
-            if (navTitle && navTitle.includes('@@')) {
+            if (navTitle && typeof navTitle === 'string' && navTitle.includes('@@')) {
               const infoArr = navTitle.split('@@')
               navButtonsArr.push({
                 name: infoArr[1],
@@ -379,168 +561,8 @@ function App() {
             console.log('navigation get title catch:', err)
           }
         }
+
         setNavButtons(navButtonsArr)
-
-        var slicers = visuals.filter((visual) => visual.type === 'slicer')
-
-        if (slicers.length > 0) {
-          for (const slicer of slicers) {
-            // get slicer *border radius* property
-            let borderRadius = SlicerType.LIST_MULTI
-            let slicerOrder = 1
-            try {
-              const result = await slicer.getProperty({
-                objectName: 'border',
-                propertyName: 'radius',
-              })
-              borderRadius = result?.value
-              // console.log('border-radius:', borderRadius)
-              const titleProperty = await slicer.getProperty({
-                objectName: 'title',
-                propertyName: 'titleText',
-              })
-              slicerOrder = titleProperty?.value
-              // console.log('slicer-order:', slicerOrder)
-            } catch (err) {
-              console.log('get property(border-radius & title) catch:', err)
-            }
-
-            // get summarized data of slicer
-            const result = await slicer.exportData(models.ExportDataType.Summarized)
-            // console.log('result=====summarized:', JSON.stringify(result))
-            // exclude first element, and empty string, (first element is column name)
-            let sliceOptions = result.data.split('\r\n').filter((el, i) => i !== 0 && el)
-
-            // get slicer state
-            const st = await slicer.getSlicerState()
-            // console.log('slicer:============:state', st)
-            let curSelectedValues = st.filters[0]?.values || []
-            let addedValueLists
-
-            switch (borderRadius) {
-              case SlicerType.LIST_SINGLE:
-                setState((curState) => ({
-                  ...curState,
-                  listSingle: [
-                    ...curState.listSingle,
-                    {
-                      [slicer.name]: {
-                        table: st.targets[0].table,
-                        column: st.targets[0].column,
-                        curValue: st.filters[0]?.values[0],
-                        valueLists: sliceOptions,
-                        order: slicerOrder,
-                      },
-                    },
-                  ],
-                }))
-                break
-              case SlicerType.DROP_SINGLE:
-                setState((curState) => ({
-                  ...curState,
-                  dropSingle: [
-                    ...curState.dropSingle,
-                    {
-                      [slicer.name]: {
-                        table: st.targets[0].table,
-                        column: st.targets[0].column,
-                        curValue: st.filters[0]?.values[0],
-                        valueLists: sliceOptions,
-                        order: slicerOrder,
-                      },
-                    },
-                  ],
-                }))
-                break
-              case SlicerType.LIST_MULTI_ALL:
-                addedValueLists = sliceOptions.map((el) => ({
-                  label: el,
-                  checked: curSelectedValues.includes(el) ? true : false,
-                }))
-                addedValueLists.unshift({ label: 'Select All', checked: false })
-
-                setState((curState) => ({
-                  ...curState,
-                  listMultiAll: [
-                    ...curState.listMultiAll,
-                    {
-                      [slicer.name]: {
-                        table: st.targets[0].table,
-                        column: st.targets[0].column,
-                        curValue: curSelectedValues,
-                        valueLists: addedValueLists,
-                        order: slicerOrder,
-                      },
-                    },
-                  ],
-                }))
-                break
-              case SlicerType.DROP_MULTI_ALL:
-                addedValueLists = sliceOptions.map((el) => ({
-                  label: el,
-                  checked: curSelectedValues.includes(el) ? true : false,
-                }))
-                addedValueLists.unshift({ label: 'Select All', checked: false })
-
-                setState((curState) => ({
-                  ...curState,
-                  dropMultiAll: [
-                    ...curState.dropMultiAll,
-                    {
-                      [slicer.name]: {
-                        table: st.targets[0].table,
-                        column: st.targets[0].column,
-                        curValue: curSelectedValues,
-                        valueLists: addedValueLists,
-                        order: slicerOrder,
-                      },
-                    },
-                  ],
-                }))
-                break
-              case SlicerType.DROP_MULTI:
-                setState((curState) => ({
-                  ...curState,
-                  dropMulti: [
-                    ...curState.dropMulti,
-                    {
-                      [slicer.name]: {
-                        order: slicerOrder,
-                        table: st.targets[0].table,
-                        column: st.targets[0].column,
-                        curValue: curSelectedValues,
-                        valueLists: sliceOptions.map((el) => ({
-                          label: el,
-                          checked: curSelectedValues.includes(el) ? true : false,
-                        })),
-                      },
-                    },
-                  ],
-                }))
-                break
-              default:
-                // SlicerType.LIST_MULTI
-                setState((curState) => ({
-                  ...curState,
-                  listMulti: [
-                    ...curState.listMulti,
-                    {
-                      [slicer.name]: {
-                        order: slicerOrder,
-                        table: st.targets[0].table,
-                        column: st.targets[0].column,
-                        curValue: curSelectedValues,
-                        valueLists: sliceOptions.map((el) => ({
-                          label: el,
-                          checked: curSelectedValues.includes(el) ? true : false,
-                        })),
-                      },
-                    },
-                  ],
-                }))
-            }
-          }
-        }
       })
       .catch((err) => console.log('get Visual catch:', err))
   }
